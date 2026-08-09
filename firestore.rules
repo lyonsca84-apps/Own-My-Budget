@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "lyonsca84@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function isValidString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isValidList(val, maxItems) {
+      return val is list && val.size() <= maxItems;
+    }
+
+    function isValidOptionalList(data, field, maxItems) {
+      return !(field in data) || data[field] == null || (data[field] is list && data[field].size() <= maxItems);
+    }
+
+    function fieldUnchanged(field, currentData, newData) {
+      return !(field in newData) || newData[field] == currentData[field];
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields([
+               'uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt',
+               'checkingBalance', 'emergencyBalance', 'totalBudgetAllocated', 'totalBudgetSpent',
+               'hasSeenOnboarding', 'onboardingAnswers', 'savingsChallenge', 'savingsGoals',
+               'savingsActivities', 'badges', 'generalSavings', 'transactions', 'emergencyLogs',
+               'totalIncomeAdded', 'totalGrocerySpent', 'totalBillsPaid', 'totalLoanPayments',
+               'totalCreditCardPayments', 'totalSavingsAdded', 'totalEmergencyFundAdded',
+               'groceryItems', 'groceryBudget', 'miscItems', 'netWorth', 'savingsBalance', 'paychecks',
+               'categories', 'bills', 'subs', 'warranties', 'cardList', 'mortgages', 'personals', 'goals'
+             ]) &&
+             (!( 'uid' in data) || data.uid == request.auth.uid) &&
+             (!( 'email' in data) || isValidEmail(data.email)) &&
+             isValidOptionalString(data, 'displayName', 100) &&
+             isValidOptionalString(data, 'photoURL', 500) &&
+             (!( 'role' in data) || data.role in ['user', 'admin', 'premium', 'client']) &&
+             (!( 'checkingBalance' in data) || data.checkingBalance is number) &&
+             (!( 'emergencyBalance' in data) || data.emergencyBalance is number) &&
+             (!( 'totalBudgetAllocated' in data) || data.totalBudgetAllocated is number) &&
+             (!( 'totalBudgetSpent' in data) || data.totalBudgetSpent is number) &&
+             (!( 'hasSeenOnboarding' in data) || data.hasSeenOnboarding is bool) &&
+             (!( 'onboardingAnswers' in data) || data.onboardingAnswers is map) &&
+             (!( 'savingsChallenge' in data) || data.savingsChallenge is map) &&
+             isValidOptionalList(data, 'savingsGoals', 100) &&
+             isValidOptionalList(data, 'savingsActivities', 100) &&
+             isValidOptionalList(data, 'badges', 100) &&
+             (!( 'generalSavings' in data) || data.generalSavings is number) &&
+             isValidOptionalList(data, 'transactions', 1000) &&
+             isValidOptionalList(data, 'emergencyLogs', 1000) &&
+             (!( 'totalIncomeAdded' in data) || data.totalIncomeAdded is number) &&
+             (!( 'totalGrocerySpent' in data) || data.totalGrocerySpent is number) &&
+             (!( 'totalBillsPaid' in data) || data.totalBillsPaid is number) &&
+             (!( 'totalLoanPayments' in data) || data.totalLoanPayments is number) &&
+             (!( 'totalCreditCardPayments' in data) || data.totalCreditCardPayments is number) &&
+             (!( 'totalSavingsAdded' in data) || data.totalSavingsAdded is number) &&
+             (!( 'totalEmergencyFundAdded' in data) || data.totalEmergencyFundAdded is number) &&
+             isValidOptionalList(data, 'groceryItems', 500) &&
+             (!( 'groceryBudget' in data) || data.groceryBudget is number) &&
+             isValidOptionalList(data, 'miscItems', 500) &&
+             (!( 'netWorth' in data) || data.netWorth is number) &&
+             (!( 'savingsBalance' in data) || data.savingsBalance is number) &&
+             isValidOptionalList(data, 'paychecks', 100) &&
+             isValidOptionalList(data, 'categories', 100) &&
+             isValidOptionalList(data, 'bills', 100) &&
+             isValidOptionalList(data, 'subs', 100) &&
+             isValidOptionalList(data, 'warranties', 100) &&
+             isValidOptionalList(data, 'cardList', 100) &&
+             isValidOptionalList(data, 'mortgages', 100) &&
+             isValidOptionalList(data, 'personals', 100) &&
+             isValidOptionalList(data, 'goals', 100);
+    }
+
+    function isValidEmergencyLog(data) {
+      return hasOnlyAllowedFields(['id', 'uid', 'date', 'category', 'iconName', 'description', 'notes', 'amount', 'status', 'createdAt']) &&
+             isValidString(data.id, 100) &&
+             isValidString(data.uid, 100) &&
+             isValidString(data.date, 50) &&
+             data.amount is number &&
+             data.status in ['Paid', 'Pending'] &&
+             isValidOptionalString(data, 'category', 100) &&
+             isValidOptionalString(data, 'description', 500) &&
+             isValidOptionalString(data, 'notes', 1000) &&
+             isValidOptionalString(data, 'iconName', 50);
+    }
+
+    // ===============================================================
+    // Routes
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'user' || request.resource.data.role == 'client' || isAdmin()) &&
+                      request.resource.data.createdAt == request.time;
+      
+      allow update: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      fieldUnchanged('uid', resource.data, request.resource.data) && 
+                      fieldUnchanged('email', resource.data, request.resource.data) && 
+                      fieldUnchanged('createdAt', resource.data, request.resource.data) &&
+                      (request.resource.data.role == resource.data.role || 
+                       (resource.data.role == 'user' && request.resource.data.role == 'client') ||
+                       isAdmin());
+      
+      allow delete: if isAdmin();
+    }
+
+    match /emergencyLogs/{logId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+                      request.resource.data.uid == request.auth.uid &&
+                      isValidEmergencyLog(request.resource.data) &&
+                      request.resource.data.createdAt == request.time;
+      allow update: if isAuthenticated() && 
+                      resource.data.uid == request.auth.uid &&
+                      request.resource.data.uid == request.auth.uid &&
+                      isValidEmergencyLog(request.resource.data) &&
+                      fieldUnchanged('uid', resource.data, request.resource.data) &&
+                      fieldUnchanged('createdAt', resource.data, request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+  }
+}

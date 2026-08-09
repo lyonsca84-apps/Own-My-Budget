@@ -1,0 +1,233 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Main user document containing profile info and financial state.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "emergencyBalance": { "type": "number" },
+        "checkingBalance": { "type": "number" },
+        "savingsBalance": { "type": "number" },
+        "netWorth": { "type": "number" },
+        "totalIncomeAdded": { "type": "number" },
+        "totalBudgetAllocated": { "type": "number" },
+        "totalGrocerySpent": { "type": "number" },
+        "totalBillsPaid": { "type": "number" },
+        "totalLoanPayments": { "type": "number" },
+        "totalCreditCardPayments": { "type": "number" },
+        "totalSavingsAdded": { "type": "number" },
+        "totalEmergencyFundAdded": { "type": "number" },
+        "hasSeenOnboarding": { "type": "boolean" },
+        "createdAt": { "type": "object", "description": "Firebase Timestamp" },
+        "paychecks": { "type": "array", "items": { "type": "object" } },
+        "categories": { "type": "array", "items": { "type": "object" } },
+        "bills": { "type": "array", "items": { "$ref": "Bill" } },
+        "subs": { "type": "array", "items": { "$ref": "Subscription" } },
+        "warranties": { "type": "array", "items": { "$ref": "Warranty" } },
+        "cardList": { "type": "array", "items": { "$ref": "CardData" } },
+        "mortgages": { "type": "array", "items": { "$ref": "Loan" } },
+        "personals": { "type": "array", "items": { "$ref": "Loan" } },
+        "goals": { "type": "array", "items": { "type": "object" } },
+        "savingsChallenge": { "$ref": "SavingsChallenge" },
+        "savingsGoals": { "type": "array", "items": { "$ref": "SavingsGoal" } },
+        "badges": { "type": "array", "items": { "$ref": "Badge" } },
+        "generalSavings": { "type": "number" },
+        "groceryBudget": { "type": "number" },
+        "groceryItems": { "type": "array", "items": { "$ref": "GroceryItem" } },
+        "miscItems": { "type": "array", "items": { "$ref": "MiscItem" } }
+      },
+      "required": ["uid", "email"]
+    },
+    "EmergencyLog": {
+      "title": "Emergency Log",
+      "description": "A log of an emergency expense or income.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string" },
+        "iconName": { "type": "string" },
+        "description": { "type": "string" },
+        "notes": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Paid", "Pending"] },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["id", "date", "amount", "status"]
+    },
+    "SavingsChallenge": {
+      "title": "Savings Challenge",
+      "description": "52-week money challenge state.",
+      "type": "object",
+      "properties": {
+        "blocks": { "type": "array", "items": { "$ref": "SavingsChallengeBlock" } },
+        "totalSaved": { "type": "number" },
+        "multiplier": { "type": "number" }
+      }
+    },
+    "SavingsChallengeBlock": {
+      "title": "Savings Challenge Block",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "weeks": { "type": "string" },
+        "amountSaved": { "type": "number" },
+        "isCompleted": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "SavingsGoal": {
+      "title": "Savings Goal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "target": { "type": "number" },
+        "current": { "type": "number" },
+        "color": { "type": "string" },
+        "isEmergencyRelated": { "type": "boolean" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "object" }
+      }
+    },
+    "Badge": {
+      "title": "Badge",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "dateEarned": { "type": "string" },
+        "type": { "type": "string" }
+      }
+    },
+    "Bill": {
+      "title": "Bill",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "amount": { "type": "string" },
+        "status": { "type": "string" },
+        "iconName": { "type": "string" },
+        "secondPaymentDate": { "type": "string" },
+        "secondPaymentAmount": { "type": "string" }
+      }
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cost": { "type": "string" },
+        "icon": { "type": "string" },
+        "startDate": { "type": "string" },
+        "expiryDate": { "type": "string" }
+      }
+    },
+    "Warranty": {
+      "title": "Warranty",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "startDate": { "type": "string" },
+        "iconName": { "type": "string" }
+      }
+    },
+    "CardData": {
+      "title": "Card Data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "number": { "type": "string" },
+        "balance": { "type": "string" },
+        "balanceValue": { "type": "number" },
+        "available": { "type": "string" },
+        "availableValue": { "type": "number" },
+        "limit": { "type": "string" },
+        "limitValue": { "type": "number" },
+        "apr": { "type": "number" },
+        "gradient": { "type": "string" },
+        "spending": { "type": "array", "items": { "type": "object" } },
+        "minPaymentDue": { "type": "number" },
+        "payment1Amount": { "type": "number" },
+        "payment1Date": { "type": "string" },
+        "payment2Amount": { "type": "number" },
+        "payment2Date": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Loan": {
+      "title": "Loan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "lender": { "type": "string" },
+        "originalAmount": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "monthlyPayment": { "type": "number" },
+        "nextDueDate": { "type": "string" },
+        "interestRate": { "type": "number" },
+        "isHighInterest": { "type": "boolean" }
+      }
+    },
+    "GroceryItem": {
+      "title": "Grocery Item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "checked": { "type": "boolean" },
+        "category": { "type": "string" },
+        "image": { "type": "string" },
+        "matchedImage": { "type": "string" },
+        "store": { "type": "string" },
+        "storePrices": { "type": "array", "items": { "type": "object" } },
+        "notes": { "type": "string" },
+        "isPending": { "type": "boolean" }
+      }
+    },
+    "MiscItem": {
+      "title": "Miscellaneous Item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "store": { "type": "string" },
+        "notes": { "type": "string" },
+        "isPaid": { "type": "boolean" }
+      },
+      "required": ["id", "name", "amount", "date", "isPaid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and financial state."
+    },
+    "/users/{userId}/emergencyLogs/{logId}": {
+      "schema": "EmergencyLog",
+      "description": "Individual emergency fund logs."
+    },
+    "/test/connection": {
+      "schema": { "type": "object", "properties": { "status": { "type": "string" } } },
+      "description": "Dummy document for connection testing."
+    }
+  }
+}

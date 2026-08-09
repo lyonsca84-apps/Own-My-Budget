@@ -1,0 +1,5 @@
+{
+  "name": "Own My Budget",
+  "description": "A personal budgeting app featuring clean typography, intuitive financial tracking, and a comprehensive bills tracker.",
+  "requestFramePermissions": ["camera"]
+}
