@@ -19,6 +19,13 @@ service cloud.firestore {
          (request.auth.token.email == "lyonsca84@gmail.com" && request.auth.token.email_verified == true));
     }
 
+    // Org-scoped permission level ('owner' | 'admin' | 'member' | 'guest', see resources.ts
+    // ROLES), distinct from the account-tier isAdmin() check above.
+    function isOrgMember(orgId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
@@ -149,6 +156,39 @@ service cloud.firestore {
                       fieldUnchanged('uid', resource.data, request.resource.data) &&
                       fieldUnchanged('createdAt', resource.data, request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Organization / Team Resources (SOT: resources.ts)
+    //
+    // All writes are denied at this layer. Every mutation to these
+    // collections must go through the Express service layer's
+    // requireGate() middleware, which is the only place role +
+    // plan-limit checks (evaluateFeatureGate) are evaluated. This
+    // keeps resources.ts the single enforcement point instead of
+    // re-deriving ROLE_PERMISSIONS in rules language.
+    // ===============================================================
+
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId);
+      allow write: if false;
+
+      match /members/{memberId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if false;
+      }
+
+      match /invitations/{invitationId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if false;
+      }
+
+      match /websites/{websiteId} {
+        // Public/published-site rendering is out of scope for this pass;
+        // revisit when the websites feature itself is built.
+        allow read: if isOrgMember(orgId);
+        allow write: if false;
+      }
     }
   }
 }

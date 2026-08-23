@@ -27,7 +27,8 @@ import {
   deleteDoc,
   Timestamp,
   getDocFromServer,
-  serverTimestamp
+  serverTimestamp,
+  type FieldValue
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -112,5 +113,6 @@ export {
   Timestamp,
   getDocFromServer,
   serverTimestamp,
-  type User
+  type User,
+  type FieldValue
 };

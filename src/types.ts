@@ -1,4 +1,6 @@
 import React from 'react';
+import type { Timestamp, FieldValue } from './firebase';
+import type { PlanKey, Role, ResourceKey } from '../resources';
 
 export interface SavingsActivity {
   id: string;
@@ -151,4 +153,54 @@ export interface MiscItem {
   store?: string;
   notes?: string;
   isPaid: boolean;
+}
+
+// ===============================================================
+// Organization / Team Data Model
+// SOT: ../resources.ts (plan limits, roles, RESOURCES, evaluateFeatureGate)
+//
+// orgRole here is intentionally separate from users/{uid}.role, which
+// tracks account tier ('user' | 'admin' | 'premium' | 'client') and is
+// enforced by firestore.rules' isAdmin(). orgRole tracks org-scoped
+// permission level ('owner' | 'admin' | 'member' | 'guest') and lives on
+// the organizations/{orgId}/members/{uid} subdocument, never on the user
+// doc, so the two never collide.
+// ===============================================================
+
+export interface Organization {
+  id: string;
+  name: string;
+  ownerUid: string;
+  plan: PlanKey;
+  usage: Partial<Record<ResourceKey, number>>;
+  createdAt: Timestamp | FieldValue;
+}
+
+export interface OrgMember {
+  uid: string;
+  orgId: string;
+  orgRole: Role;
+  email: string;
+  displayName?: string;
+  joinedAt: Timestamp | FieldValue;
+}
+
+export interface Invitation {
+  id: string;
+  orgId: string;
+  email: string;
+  orgRole: Role;
+  invitedByUid: string;
+  status: 'pending' | 'accepted' | 'revoked';
+  createdAt: Timestamp | FieldValue;
+}
+
+export interface OrgWebsite {
+  id: string;
+  orgId: string;
+  name: string;
+  slug: string;
+  published: boolean;
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
 }
