@@ -8,6 +8,8 @@ import admin from "firebase-admin";
 import { getAuth } from "./firebaseAdmin";
 import { listAllUsers, updateUserRole, deleteUserAccount } from "./services/usersService";
 import { getAnalytics } from "./services/analyticsService";
+import { verifyToken } from "./middleware";
+import { ensureOrgForUser, getOrgPlanAndUsage } from "./services/orgService";
 
 dotenv.config();
 
@@ -307,6 +309,21 @@ async function startServer() {
     } catch (error: any) {
       console.error("Analytics Error:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Org Context Route
+  // Bootstrap read for the client's own org (plan/role/usage), not gated by
+  // a specific resource -- individual actions still go through requireGate.
+  app.get("/api/org/context", async (req, res) => {
+    try {
+      const decoded = await verifyToken(req);
+      const { orgId, orgRole } = await ensureOrgForUser(decoded.uid, decoded.email ?? "");
+      const { plan, consumed } = await getOrgPlanAndUsage(orgId);
+      res.json({ success: true, orgId, role: orgRole, plan, consumed });
+    } catch (error: any) {
+      console.error("Org Context Error:", error);
+      res.status(401).json({ error: error.message });
     }
   });
 

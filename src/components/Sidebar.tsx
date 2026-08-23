@@ -42,9 +42,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user,
 
 
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-mist-purple h-screen sticky top-0 overflow-y-auto scrollbar-hide">
+    <aside className="hidden lg:flex flex-col w-72 bg-clean-white border-r border-mist-purple h-screen sticky top-0 overflow-y-auto scrollbar-hide">
       <div className="p-10 flex items-center gap-3">
-        <div className="w-10 h-10 bg-clarity-purple rounded-xl flex items-center justify-center text-white shadow-lg shadow-clarity-purple/20">
+        <div className="w-10 h-10 bg-clarity-purple rounded-xl flex items-center justify-center text-clean-white shadow-lg shadow-clarity-purple/20">
           <DollarSign size={24} />
         </div>
         <h1 className="text-2xl font-bold text-deep-navy tracking-tight">Own My Budget</h1>
@@ -58,12 +58,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, user,
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all group ${
-                activeTab === item.id 
-                  ? 'bg-clarity-purple text-white shadow-xl shadow-clarity-purple/30' 
+                activeTab === item.id
+                  ? 'bg-clarity-purple text-clean-white shadow-xl shadow-clarity-purple/30'
                   : 'text-gray-400 hover:bg-gray-50 hover:text-deep-navy'
               }`}
             >
-              <div className={`${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-deep-navy'}`}>
+              <div className={`${activeTab === item.id ? 'text-clean-white' : 'text-gray-400 group-hover:text-deep-navy'}`}>
                 {item.icon}
               </div>
               <span className="text-sm">{item.label}</span>

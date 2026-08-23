@@ -82,6 +82,16 @@ import {
 } from "./firebase";
 import { GoogleAuthProvider } from "firebase/auth";
 import type { User } from "./firebase";
+import { FeatureGateProvider, DefaultUpgradeModal } from "./components/global/FeatureGate";
+import { RESOURCES, PLAN_KEYS, ROLES, type PlanKey, type Role, type ResourceKey } from "../resources";
+
+const EMPTY_USAGE: Record<ResourceKey, number> = (Object.keys(RESOURCES) as ResourceKey[]).reduce(
+  (acc, key) => {
+    acc[key] = 0;
+    return acc;
+  },
+  {} as Record<ResourceKey, number>
+);
 
 type Tab = 'wallet' | 'budget' | 'cards' | 'bills' | 'loans' | 'emergency' | 'savings' | 'grocery' | 'marketing' | 'therapist';
 
@@ -97,6 +107,10 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [orgPlan, setOrgPlan] = useState<PlanKey>(PLAN_KEYS.FREE);
+  const [orgRole, setOrgRole] = useState<Role>(ROLES.OWNER);
+  const [orgConsumed, setOrgConsumed] = useState<Record<ResourceKey, number>>(EMPTY_USAGE);
+  const [upgradeGate, setUpgradeGate] = useState<{ resource: ResourceKey; message: string } | null>(null);
 
   // Reset state when user changes
   useEffect(() => {
@@ -457,6 +471,28 @@ export default function App() {
     };
   }, [user]);
 
+  // Sync org plan/role/usage for FeatureGateProvider
+  useEffect(() => {
+    if (!user) return;
+
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/org/context', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setOrgPlan(data.plan);
+          setOrgRole(data.role);
+          setOrgConsumed({ ...EMPTY_USAGE, ...data.consumed });
+        }
+      } catch (error) {
+        console.error('Error fetching org context:', error);
+      }
+    })();
+  }, [user]);
+
   // Persistence Effects
   useEffect(() => {
     if (!user) return;
@@ -691,6 +727,12 @@ export default function App() {
   };
 
   return (
+    <FeatureGateProvider
+      plan={orgPlan}
+      role={orgRole}
+      consumed={orgConsumed}
+      onTriggerUpgrade={(params) => setUpgradeGate(params)}
+    >
     <div className="min-h-screen bg-[#F8F9FD] font-sans text-deep-navy selection:bg-clarity-purple/10 selection:text-clarity-purple">
       <AnimatePresence mode="wait">
         {toast && (
@@ -699,9 +741,9 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-3 ${
-              toast.type === 'success' ? 'bg-progress-green text-white' : 
-              toast.type === 'error' ? 'bg-red-500 text-white' : 
-              'bg-clarity-purple text-white'
+              toast.type === 'success' ? 'bg-progress-green text-clean-white' :
+              toast.type === 'error' ? 'bg-red-500 text-clean-white' :
+              'bg-clarity-purple text-clean-white'
             }`}
           >
             {toast.type === 'success' ? <CheckCircle2 size={18} /> : 
@@ -744,7 +786,7 @@ export default function App() {
               {/* Top Header */}
               <header className="h-20 lg:h-24 px-4 lg:px-8 flex items-center justify-between bg-transparent flex-shrink-0">
                 <div className="flex items-center gap-3 lg:hidden">
-                  <div className="w-8 h-8 bg-clarity-purple rounded-lg flex items-center justify-center text-white shadow-lg shadow-clarity-purple/20">
+                  <div className="w-8 h-8 bg-clarity-purple rounded-lg flex items-center justify-center text-clean-white shadow-lg shadow-clarity-purple/20">
                     <DollarSign size={18} />
                   </div>
                   <h1 className="text-lg font-bold text-deep-navy tracking-tight">Own My Budget</h1>
@@ -756,7 +798,7 @@ export default function App() {
                     <button 
                       onClick={() => setIsSearchOpen(!isSearchOpen)}
                       className={`p-2.5 rounded-xl transition-all shadow-sm border ${
-                        isSearchOpen ? 'bg-clarity-purple text-white border-clarity-purple' : 'bg-white text-gray-400 border-mist-purple hover:text-clarity-purple'
+                        isSearchOpen ? 'bg-clarity-purple text-clean-white border-clarity-purple' : 'bg-clean-white text-gray-400 border-mist-purple hover:text-clarity-purple'
                       }`}
                     >
                       <Search size={20} />
@@ -770,13 +812,13 @@ export default function App() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsSearchOpen(false)}
-                            className="fixed inset-0 z-40 bg-black/5"
+                            className="fixed inset-0 z-40 bg-deep-navy/5"
                           />
                           <motion.div 
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="fixed sm:absolute top-20 sm:top-full left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-96 bg-white rounded-2xl border border-mist-purple shadow-2xl z-50 p-4"
+                            className="fixed sm:absolute top-20 sm:top-full left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-96 bg-clean-white rounded-2xl border border-mist-purple shadow-2xl z-50 p-4"
                           >
                             <div className="relative">
                               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -803,9 +845,9 @@ export default function App() {
                     </AnimatePresence>
                   </div>
 
-                  <button className="relative p-2.5 bg-white border border-mist-purple rounded-xl text-gray-400 hover:text-clarity-purple transition-all shadow-sm">
+                  <button className="relative p-2.5 bg-clean-white border border-mist-purple rounded-xl text-gray-400 hover:text-clarity-purple transition-all shadow-sm">
                     <Bell size={20} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-clean-white" />
                   </button>
                   
                   <div className="hidden sm:flex flex-col items-end">
@@ -820,7 +862,7 @@ export default function App() {
                     <img 
                       src={user.photoURL || `https://ui-avatars.com/api/?name=${userData?.displayName || user.displayName || 'User'}`} 
                       alt="Profile" 
-                      className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl object-cover border-2 border-white shadow-md"
+                      className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl object-cover border-2 border-clean-white shadow-md"
                       referrerPolicy="no-referrer"
                     />
                     <div className="text-left hidden lg:block">
@@ -991,7 +1033,7 @@ export default function App() {
               </div>
 
               {/* Mobile Bottom Navigation */}
-              <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-mist-purple px-6 pt-3 pb-safe flex items-center justify-between z-[60] shadow-[0_-10px_25px_rgba(0,0,0,0.05)]">
+              <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-clean-white border-t border-mist-purple px-6 pt-3 pb-safe flex items-center justify-between z-[60] shadow-[0_-10px_25px_rgba(0,0,0,0.05)]">
                 {[
                   { id: 'wallet', icon: <LayoutDashboard size={24} />, label: 'Home' },
                   { id: 'budget', icon: <PieChart size={24} />, label: 'Budget' },
@@ -1041,7 +1083,7 @@ export default function App() {
                       animate={{ y: 0 }}
                       exit={{ y: '100%' }}
                       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                      className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-[80] p-8 lg:hidden max-h-[80vh] overflow-y-auto"
+                      className="fixed bottom-0 left-0 right-0 bg-clean-white rounded-t-[40px] z-[80] p-8 lg:hidden max-h-[80vh] overflow-y-auto"
                     >
                       <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8" />
                       <div className="grid grid-cols-2 gap-4">
@@ -1051,7 +1093,7 @@ export default function App() {
                           { id: 'savings', label: 'Savings', icon: <PiggyBank size={20} />, color: 'bg-growth-teal/10 text-growth-teal' },
                           { id: 'grocery', label: 'Groceries', icon: <ShoppingCart size={20} />, color: 'bg-orange-50 text-orange-500' },
                           { id: 'therapist', label: 'AI Budget Buddy', icon: <Sparkles size={20} />, color: 'bg-clarity-purple/10 text-clarity-purple' },
-                          { id: 'tour', label: 'Guided Tour', icon: <Sparkles size={20} />, color: 'bg-clarity-purple text-white', isTour: true },
+                          { id: 'tour', label: 'Guided Tour', icon: <Sparkles size={20} />, color: 'bg-clarity-purple text-clean-white', isTour: true },
                         ].map((item) => (
                           <button
                             key={item.id}
@@ -1064,10 +1106,10 @@ export default function App() {
                               setIsMobileMenuOpen(false);
                             }}
                             className={`flex items-center gap-4 p-4 rounded-2xl font-bold transition-all cursor-pointer active:opacity-60 ${
-                              activeTab === item.id ? 'bg-clarity-purple text-white' : 'bg-gray-50 text-deep-navy'
+                              activeTab === item.id ? 'bg-clarity-purple text-clean-white' : 'bg-gray-50 text-deep-navy'
                             }`}
                           >
-                            <div className={`p-2 rounded-xl ${activeTab === item.id ? 'bg-white/20 text-white' : item.color}`}>
+                            <div className={`p-2 rounded-xl ${activeTab === item.id ? 'bg-clean-white/20 text-clean-white' : item.color}`}>
                               {item.icon}
                             </div>
                             <span className="text-sm">{item.label}</span>
@@ -1102,12 +1144,12 @@ export default function App() {
 
       <AnimatePresence>
         {isEditModalOpen && editingItem && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-deep-navy/40 backdrop-blur-sm">
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-6"
+              className="bg-clean-white rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-6"
             >
               <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-bold text-deep-navy">
@@ -1175,7 +1217,7 @@ export default function App() {
 
                 <button 
                   type="submit"
-                  className="w-full bg-clarity-purple text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90 transition-all mt-4"
+                  className="w-full bg-clarity-purple text-clean-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90 transition-all mt-4"
                 >
                   Save Changes
                 </button>
@@ -1200,6 +1242,12 @@ export default function App() {
         onTransfer={handleTransfer}
       />
     </div>
+      <DefaultUpgradeModal
+        isOpen={!!upgradeGate}
+        onClose={() => setUpgradeGate(null)}
+        message={upgradeGate?.message ?? ''}
+      />
+    </FeatureGateProvider>
   );
 }
 
