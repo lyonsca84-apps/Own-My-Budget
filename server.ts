@@ -5,6 +5,9 @@ import { fileURLToPath } from "url";
 import { JWT } from "google-auth-library";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
+import { getAuth } from "./firebaseAdmin";
+import { listAllUsers, updateUserRole, deleteUserAccount } from "./services/usersService";
+import { getAnalytics } from "./services/analyticsService";
 
 dotenv.config();
 
@@ -95,9 +98,6 @@ if (clientEmail && privateKey && projectId) {
   if (!projectId) console.warn("- Missing GOOGLE_PROJECT_ID");
 }
 
-const db = admin.apps.length ? admin.firestore() : null;
-const auth = admin.apps.length ? admin.auth() : null;
-
 const GCIP_API_BASE = 'https://identitytoolkit.googleapis.com/v2';
 const SCOPES = ['https://www.googleapis.com/auth/cloud-platform'];
 
@@ -124,8 +124,7 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
 
   const idToken = authHeader.split('Bearer ')[1];
   try {
-    if (!auth) throw new Error("Firebase Admin not initialized");
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await getAuth().verifyIdToken(idToken);
     
     // Check if the user is the owner
     const ownerEmail = 'lyonsca84@gmail.com';
@@ -268,26 +267,8 @@ async function startServer() {
   // Admin Routes
   app.get("/api/admin/users", verifyAdmin, async (req, res) => {
     try {
-      if (!auth || !db) throw new Error("Firebase Admin not initialized");
-      
-      const listUsersResult = await auth.listUsers(1000);
-      const users = listUsersResult.users;
-      
-      // Fetch Firestore profiles for these users
-      const userProfiles = await Promise.all(users.map(async (user) => {
-        const doc = await db.collection('users').doc(user.uid).get();
-        return {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          lastSignInTime: user.metadata.lastSignInTime,
-          creationTime: user.metadata.creationTime,
-          profile: doc.exists ? doc.data() : null
-        };
-      }));
-      
-      res.json({ success: true, users: userProfiles });
+      const users = await listAllUsers();
+      res.json({ success: true, users });
     } catch (error: any) {
       console.error("List Users Error:", error);
       res.status(500).json({ error: error.message });
@@ -296,11 +277,10 @@ async function startServer() {
 
   app.post("/api/admin/users/:uid/role", verifyAdmin, async (req, res) => {
     try {
-      if (!db) throw new Error("Firebase Admin not initialized");
       const { uid } = req.params;
       const { role } = req.body;
-      
-      await db.collection('users').doc(uid).update({ role });
+
+      await updateUserRole(uid, role);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Update Role Error:", error);
@@ -310,12 +290,9 @@ async function startServer() {
 
   app.delete("/api/admin/users/:uid", verifyAdmin, async (req, res) => {
     try {
-      if (!auth || !db) throw new Error("Firebase Admin not initialized");
       const { uid } = req.params;
-      
-      await auth.deleteUser(uid);
-      await db.collection('users').doc(uid).delete();
-      
+
+      await deleteUserAccount(uid);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Delete User Error:", error);
@@ -325,34 +302,8 @@ async function startServer() {
 
   app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
     try {
-      if (!db) throw new Error("Firebase Admin not initialized");
-      
-      const usersSnapshot = await db.collection('users').get();
-      const users = usersSnapshot.docs.map(doc => doc.data());
-      
-      const totalUsers = users.length;
-      const totalNetWorth = users.reduce((sum, u) => sum + (u.netWorth || 0), 0);
-      const avgNetWorth = totalUsers > 0 ? totalNetWorth / totalUsers : 0;
-      
-      // Group by creation month
-      const signupsByMonth: Record<string, number> = {};
-      users.forEach(u => {
-        if (u.createdAt) {
-          const date = u.createdAt.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
-          const month = date.toLocaleString('default', { month: 'short', year: '2-digit' });
-          signupsByMonth[month] = (signupsByMonth[month] || 0) + 1;
-        }
-      });
-
-      res.json({ 
-        success: true, 
-        analytics: {
-          totalUsers,
-          totalNetWorth,
-          avgNetWorth,
-          signupsByMonth: Object.entries(signupsByMonth).map(([name, count]) => ({ name, count }))
-        } 
-      });
+      const analytics = await getAnalytics();
+      res.json({ success: true, analytics });
     } catch (error: any) {
       console.error("Analytics Error:", error);
       res.status(500).json({ error: error.message });
