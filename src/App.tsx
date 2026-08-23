@@ -200,82 +200,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync user data from Firestore
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setUserData(data);
-        // Only update local state from snapshot if it's true, or if we're not in the middle of an update
-        // This prevents the race condition where handleOnboardingComplete sets it to true
-        // but a stale snapshot sets it back to false
-        if (data.hasSeenOnboarding === true) {
-          setHasSeenOnboarding(true);
-        }
-        if (data.netWorth !== undefined) setNetWorth(data.netWorth);
-        if (data.checkingBalance !== undefined) setCheckingBalance(data.checkingBalance);
-        if (data.savingsBalance !== undefined) setSavingsBalance(data.savingsBalance);
-        if (data.emergencyBalance !== undefined) setEmergencyBalance(data.emergencyBalance);
-        
-        // New financial metrics
-        if (data.totalIncomeAdded !== undefined) setTotalIncomeAdded(data.totalIncomeAdded);
-        if (data.totalBudgetAllocated !== undefined) setTotalBudgetAllocated(data.totalBudgetAllocated);
-        if (data.totalGrocerySpent !== undefined) setTotalGrocerySpent(data.totalGrocerySpent);
-        if (data.totalBillsPaid !== undefined) setTotalBillsPaid(data.totalBillsPaid);
-        if (data.totalLoanPayments !== undefined) setTotalLoanPayments(data.totalLoanPayments);
-        if (data.totalCreditCardPayments !== undefined) setTotalCreditCardPayments(data.totalCreditCardPayments);
-        if (data.totalSavingsAdded !== undefined) setTotalSavingsAdded(data.totalSavingsAdded);
-        if (data.totalEmergencyFundAdded !== undefined) setTotalEmergencyFundAdded(data.totalEmergencyFundAdded);
-        
-        // Financial states
-        if (data.paychecks) setPaychecks(data.paychecks);
-        if (data.categories) setCategories(data.categories);
-        if (data.bills) setBills(data.bills);
-        if (data.subs) setSubs(data.subs);
-        if (data.warranties) setWarranties(data.warranties);
-        if (data.cardList) setCardList(data.cardList);
-        if (data.mortgages) setMortgages(data.mortgages);
-        if (data.personals) setPersonals(data.personals);
-        if (data.goals) setGoals(data.goals);
-        if (data.savingsChallenge) {
-          const challenge = data.savingsChallenge;
-          // Ensure blocks exists before setting
-          if (challenge.blocks && Array.isArray(challenge.blocks)) {
-            setSavingsChallenge(challenge);
-          }
-        }
-        if (data.savingsGoals) setSavingsGoals(Array.isArray(data.savingsGoals) ? data.savingsGoals : []);
-        if (data.savingsActivities) setSavingsActivities(Array.isArray(data.savingsActivities) ? data.savingsActivities : []);
-        if (data.badges) setBadges(Array.isArray(data.badges) ? data.badges : []);
-        if (data.generalSavings !== undefined) setGeneralSavings(data.generalSavings);
-        if (data.groceryBudget) setGroceryBudget(data.groceryBudget);
-        if (data.groceryItems) setGroceryItems(data.groceryItems);
-        if (data.miscItems) setMiscItems(Array.isArray(data.miscItems) ? data.miscItems : []);
-      }
-    });
-
-    // Sync emergency logs
-    const logsQuery = query(
-      collection(db, 'emergencyLogs'),
-      where('uid', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as EmergencyLog[];
-      setEmergencyLogs(logsData);
-    });
-
-    return () => {
-      unsubscribe();
-      unsubscribeLogs();
-    };
-  }, [user]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
@@ -456,6 +380,82 @@ export default function App() {
   // Peace Score: (Savings + Emergency) / (Monthly Expenses * 6)
   const runwayMonths = (calculatedSavingsBalance + emergencyBalance) / (totalExpenses || 1);
   const peaceScore = Math.min(Math.round((runwayMonths / 6) * 100), 100);
+
+  // Sync user data from Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setUserData(data);
+        // Only update local state from snapshot if it's true, or if we're not in the middle of an update
+        // This prevents the race condition where handleOnboardingComplete sets it to true
+        // but a stale snapshot sets it back to false
+        if (data.hasSeenOnboarding === true) {
+          setHasSeenOnboarding(true);
+        }
+        if (data.netWorth !== undefined) setNetWorth(data.netWorth);
+        if (data.checkingBalance !== undefined) setCheckingBalance(data.checkingBalance);
+        if (data.savingsBalance !== undefined) setSavingsBalance(data.savingsBalance);
+        if (data.emergencyBalance !== undefined) setEmergencyBalance(data.emergencyBalance);
+
+        // New financial metrics
+        if (data.totalIncomeAdded !== undefined) setTotalIncomeAdded(data.totalIncomeAdded);
+        if (data.totalBudgetAllocated !== undefined) setTotalBudgetAllocated(data.totalBudgetAllocated);
+        if (data.totalGrocerySpent !== undefined) setTotalGrocerySpent(data.totalGrocerySpent);
+        if (data.totalBillsPaid !== undefined) setTotalBillsPaid(data.totalBillsPaid);
+        if (data.totalLoanPayments !== undefined) setTotalLoanPayments(data.totalLoanPayments);
+        if (data.totalCreditCardPayments !== undefined) setTotalCreditCardPayments(data.totalCreditCardPayments);
+        if (data.totalSavingsAdded !== undefined) setTotalSavingsAdded(data.totalSavingsAdded);
+        if (data.totalEmergencyFundAdded !== undefined) setTotalEmergencyFundAdded(data.totalEmergencyFundAdded);
+
+        // Financial states
+        if (data.paychecks) setPaychecks(data.paychecks);
+        if (data.categories) setCategories(data.categories);
+        if (data.bills) setBills(data.bills);
+        if (data.subs) setSubs(data.subs);
+        if (data.warranties) setWarranties(data.warranties);
+        if (data.cardList) setCardList(data.cardList);
+        if (data.mortgages) setMortgages(data.mortgages);
+        if (data.personals) setPersonals(data.personals);
+        if (data.goals) setGoals(data.goals);
+        if (data.savingsChallenge) {
+          const challenge = data.savingsChallenge;
+          // Ensure blocks exists before setting
+          if (challenge.blocks && Array.isArray(challenge.blocks)) {
+            setSavingsChallenge(challenge);
+          }
+        }
+        if (data.savingsGoals) setSavingsGoals(Array.isArray(data.savingsGoals) ? data.savingsGoals : []);
+        if (data.savingsActivities) setSavingsActivities(Array.isArray(data.savingsActivities) ? data.savingsActivities : []);
+        if (data.badges) setBadges(Array.isArray(data.badges) ? data.badges : []);
+        if (data.generalSavings !== undefined) setGeneralSavings(data.generalSavings);
+        if (data.groceryBudget) setGroceryBudget(data.groceryBudget);
+        if (data.groceryItems) setGroceryItems(data.groceryItems);
+        if (data.miscItems) setMiscItems(Array.isArray(data.miscItems) ? data.miscItems : []);
+      }
+    });
+
+    // Sync emergency logs
+    const logsQuery = query(
+      collection(db, 'emergencyLogs'),
+      where('uid', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+      const logsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as EmergencyLog[];
+      setEmergencyLogs(logsData);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeLogs();
+    };
+  }, [user]);
 
   // Persistence Effects
   useEffect(() => {
